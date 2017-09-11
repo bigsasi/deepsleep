@@ -3,7 +3,7 @@ import numpy as np
 import os
 import shhsfiles
 import edfdata
-#import kerasmodels
+from kerasmodels import createDimmuMLPModel, convModel
 
 # Load all the EDF files in a given path
 def loadAllEdf(path):
@@ -14,55 +14,76 @@ def loadAllEdf(path):
             edfFiles.append(shhsfiles.loadEdf(f, path))
     return edfFiles
 
-# Slice data in train, test and validation
-def sliceData(X, Y):
-    total = X.shape[0];
-    firstSlice = round(total * .7);
-    secondSlice = firstSlice + round(total * .1);
+# # Slice data in train, test and validation
+# def sliceData(X, Y):
+#     total = X.shape[0];
+#     firstSlice = round(total * .7);
+#     secondSlice = firstSlice + round(total * .1);
 
-    X_train = X[:firstSlice]
-    X_test = X[firstSlice:secondSlice]
-    X_validate = X[secondSlice:]
+#     X_train = X[:firstSlice]
+#     X_test = X[firstSlice:secondSlice]
+#     X_validate = X[secondSlice:]
 
-    Y_train = Y[:firstSlice]
-    Y_test = Y[firstSlice:secondSlice]
-    Y_validate = Y[secondSlice:]
+#     Y_train = Y[:firstSlice]
+#     Y_test = Y[firstSlice:secondSlice]
+#     Y_validate = Y[secondSlice:]
 
-    return X_train, Y_train, X_test, Y_test, X_validate, Y_validate
+#     return X_train, Y_train, X_test, Y_test, X_validate, Y_validate
 
-# def preprocessing(X):
-#     for i in range(0, X.shape[2]):
-#         val = np.mean(X[:,:,i])
-#         X[:,:,i] = X[:,:,i] - val
-#     return X
 
 if __name__ == "__main__":
     print("Automatic detection of arousals")
-    path = "/Users/dimitrisathanasakis/Work/spartan/apnea/SHHS"
+    path = "./SHHS"
     edfFiles = loadAllEdf(path)
     print("Loaded {} EDF files".format(len(edfFiles)))
 
     timeWindow=30#time in seconds
     (signals,rate,X) = edfdata.loadData(edfFiles, time = timeWindow)
     Y=edfdata.loadLabels(edfFiles,time = timeWindow)#change toe womdpws here if necessary
+    # reshape to normalize everything, keep 2d for mlp/linear models
+    # 3d for convnets and lstms and shit
+    tmp=[]  
+    for i,thisX in enumerate(X):
+        tmpX=np.reshape(thisX,(thisX.shape[0],thisX.shape[1]) )
+        meanX=np.mean(tmpX,1)
+        meanX=np.reshape(meanX,(meanX.shape[0],1))
+        tmpX=tmpX-meanX
+        stdX=np.std(tmpX,1)
+        stdX=np.reshape(stdX,(stdX.shape[0],1))
+        tmpX=tmpX/stdX
+        tmp.append(tmpX)
+        X[i]=np.reshape(tmpX, (tmpX.shape[0],tmpX.shape[1],1))
+    
+    valSize = 5000
+    predsMLP = []
+    predsConv = []
+    mlpModels = []
+    convModels = []
+    for i,thisRep in enumerate(tmp):
+        thisX = thisRep[valSize:]
+        thisY = Y[valSize:]
+        model = createDimmuMLPModel(thisX,thisY)
+        model.fit(thisX,thisY, batch_size=256)
+        mlpModels.append(model)
+        preds=model.predict(thisRep[:valSize])
+        for j,pred in enumerate(preds):
+            if pred>0.5:
+                preds[j]=1
+            else:
+                preds[j]=0
+        predsMLP.append(preds)
+    predsMLP=np.reshape(np.array(predsMLP),(len(tmp),valSize))
+    
+    for i,thisRep in enumerate(X):
+        thisX = thisRep[valSize:]
+        thisY = Y[valSize:]
+        model = convModel(thisX,thisY,(thisX.shape[1],1),kernel_size=rate[i])
+        model.fit(thisX,thisY,batch_size=256)
+        preds=model.predict(thisRep[:valSize])
+        for j,pred in enumerate(preds):
+            if pred>0.5:
+                preds[j]=1
+            else:
+                preds[j]=0
+        predsConv.append(preds)
 
-    # X=np.array(X)    
-    # print("X: ", X.shape)
-    # print("Y: ", Y.shape)
-    # # X = preprocessing(X)
-
-    # print("X: ", X.shape)
-    # print("Y: ", Y.shape)
-
-    # X_train, Y_train, X_test, Y_test, X_validate, Y_validate = sliceData(X, Y)
-    # #m=np.mean(X_train)
-
-    # print("X_train: ", X_train.shape)
-    # print("Y_train: ", Y_train.shape)
-    # print("X_test: ", X_test.shape)
-    # print("Y_test: ", Y_test.shape)
-    # print("X_validate: ", X_validate.shape)
-    # print("Y_validate: ", Y_validate.shape)
-
-    # model = kerasmodels.createMLPModel(X_train[:,:,0], Y_train)
-    # kerasmodels.runModel(X_train, Y_train, X_test, Y_test, model)
