@@ -1,87 +1,131 @@
+import re
 import numpy as np
 import shhsfiles
 import os
-
-# Loads data from a list of edfFiles using windows of time second
-# Returns the list with the signals being loaded, a list with their
-# sample_rate and a list with the raw data
-def loadData(edfFiles, time = 30):
-    signals = ['eeg1', 'eeg2', 'emg', 'ecg', 'eogr', 'eogl']
-    rate = list()
-    X = list()
-    for i in range(0, len(signals)):
-        rate.append(int(edfFiles[0][signals[i] + 'Header']['sample_rate']))
-        X.append(extractAllEdfSignals(edfFiles, time, signals[i], rate[i]))
-    return signals, rate, X
-
-# Loads labels from a list of edfFiles using windows of time seconds
-def loadLabels(edfFiles, time = 30):
-    return extractAllEdfLabels(edfFiles, time)
+import pyedflib
 
 # Loads all the EDF files in a given path
 def loadPath(path):
+    """ Returns the list of edf files in path"""
     print ("Loading EDF files from", path)
     edfFiles = []
     for f in os.listdir(path):
-        if shhsfiles.isSHHSFile(f):
-            edfFiles.append(shhsfiles.loadEdf(f, path))
+        if isEdfFile(f):
+            edf = pyedflib.EdfReader(path + "/" + f)
+            edf._close()
+            edfFiles.append(edf)
     return edfFiles
 
-def formatData(time):
-    pass
-
-# Read signal from edf file into 3-d matrix where 1d: windows, 2d: time (single window), 3d: signal
-def extractEdfSignal(edf, time, signal_name, sample_rate):
-    n_signals = 1
-    window_len = time * sample_rate
-
-    if sample_rate != edf[signal_name + 'Header']['sample_rate']:
-        print('Invalid rate in file {}!'.format(edf['name']))
-
-    signal = edf[signal_name]
-    num_windows = len(signal) // window_len
-
-
-    X = signal.reshape((num_windows, window_len, 1));
-
-    return X
-
-
-def extractEdfLabels(edf, time = 30):
-    """ loadEdfLabels(edf, time = 30),
-    edf: dictionary of edf file, time: time for window 
-    Returns the presense of event in each window as (0,1) """
-    #just load any signal to get number of seconds in the file
-    signal = edf['eeg1']
-    sample_rate = int(edf['eeg1Header']['sample_rate'])
-    window_len = time * sample_rate
-
-    Y = np.zeros(len(signal) // window_len)
-    for arousal in edf['arousals']:
-        start = arousal['start']
-        duration = arousal['duration']
-        first = int(round(start / time))
-        last = first + int(duration / time)
-        Y[first:last + 1] = 1
-
+def formatLabels(labels, total_time, time):
+    """Format labels into vector where each value represents a window of
+    time seconds"""
+    time_threshold = 1
+    num_windows = total_time // time
+    Y = np.zeros(num_windows)
+    for label in labels:
+        start = label['start']
+        duration = label['duration']
+        end = start + duration
+        start_window = int(round(start / time))
+        end_window = int(round(end / time))
+        if end_window > start_window:
+            window_limit = (start_window + 1) * 30
+            if window_limit - start <= time_threshold:
+                start_window += 1
+            if end - window_limit <= time_threshold:
+                end_window -= 1
+        Y[start_window:end_window + 1] = 1
+    print("{} arousals".format(len(labels)))
     return Y
 
-def extractAllEdfSignals(edfFiles, time, signal_name, rate):
-    X = extractEdfSignal(edfFiles[0], time, signal_name, rate)
-    for i in range(1, len(edfFiles)):
-        # print("Loading file", i)
-        Xi = extractEdfSignal(edfFiles[i], time, signal_name, rate)
-        # print("With arousal:", sum(Yi_train))
-        X = np.concatenate((X, Xi), axis = 0)
+def formatSignal(raw_signal, time, signal_rate):
+    window_len = time * signal_rate
+    num_windows = len(raw_signal) // window_len
+    return raw_signal.reshape((num_windows, window_len, 1))
 
-    return X
+def readRawFiles(edfFiles, signals, time):
+    """ Read a list of edfFiles returning a map with the signal rates, 
+    a map with the signals in vector format and the vector with the 
+    labels"""
+    data = {}
+    edf = edfFiles[0]
+    edf.open(edf.file_name)
+    rates, data_edf, labels_edf = readFile(edf, signals)
+    for signal in signals:
+        data[signal] = data_edf[signal]        
+    labels = formatLabels(labels_edf, edf.file_duration, time)
+    edf._close()
+    
+    for edf in edfFiles[1:]:
+        edf.open(edf.file_name)
+        rates_edf, data_edf, labels_edf = readFile(edf, signals)
+        if rates != rates_edf:
+            print("File {} does not match the reference signal rates".format(edf.file_name))
+            edf._close()
+            continue
+        for signal in signals:
+            data[signal] = np.concatenate((data[signal], data_edf[signal]), axis = 0)
+        formated_labels = formatLabels(labels_edf, edf.file_duration, time)
+        labels = np.concatenate((labels, formated_labels), axis = 0)
+        edf._close()
 
-def extractAllEdfLabels(edfFiles, time):
-    # Load first file alone, in order to shape Y_train
-    Y = extractEdfLabels(edfFiles[0], time)
-    for i in range(1, len(edfFiles)):
-        Yi = extractEdfLabels(edfFiles[i], time)
-        # print("With arousal:", sum(Yi_train))
-        Y = np.concatenate((Y, Yi), axis = 0)
+    return rates, data, labels
 
-    return Y
+def readFiles(edfFiles, signals, time):
+    """ Read a list of edfFiles returning a map with the signal rates, 
+    a map with the signals in 3d format (using time seconds windows) 
+    and the vector with the labels"""
+    data = {}
+    edf = edfFiles[0]
+    edf.open(edf.file_name)
+    rates, data_edf, labels_edf = readFile(edf, signals)
+    for signal in signals:
+        data[signal] = formatSignal(data_edf[signal], time, rates[signal])        
+    labels = formatLabels(labels_edf, edf.file_duration, time)
+    edf._close()
+
+    for edf in edfFiles[1:]:
+        edf.open(edf.file_name)
+        rates_edf, data_edf, labels_edf = readFile(edf, signals)
+        if rates != rates_edf:
+            print("File {} does not match the reference signal rates".format(edf.file_name))
+            edf._close()
+            continue
+        for signal in signals:
+            formated_signal = formatSignal(data_edf[signal], time, rates_edf[signal])
+            data[signal] = np.concatenate((data[signal], formated_signal), axis = 0)
+        formated_labels = formatLabels(labels_edf, edf.file_duration, time)
+        labels = np.concatenate((labels, formated_labels), axis = 0)
+        edf._close()
+
+    return rates, data, labels
+
+def readFile(edf, signals):
+    rates = readRates(edf, signals)
+    data = readSignals(edf, signals)
+    labels = readLabels(edf)
+
+    return rates, data, labels
+
+def readLabels(edf):
+    if isSHHSedf(edf):
+        return shhsfiles.readLabels(edf)
+
+def readSignals(edf, signals):
+    if isSHHSedf(edf):
+        return shhsfiles.readSignals(edf, signals)
+
+def readRates(edf, signals):
+    if isSHHSedf(edf):
+        return shhsfiles.readRates(edf, signals)
+
+def isSHHSedf(edf):
+    """ isSHHSFile(edf)
+    Returns true if edf is from SHHS dataset"""
+    # TODO: change the regex to math all SHHS files
+    file_name = edf.file_name
+    return re.match(".*SHHS.*", file_name)
+    # return re.match("[0-9]*\.EDF$", file_name)
+
+def isEdfFile(file_name):
+    return re.match(".*[0-9]\.(EDF|edf)$", file_name)
