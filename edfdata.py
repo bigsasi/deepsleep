@@ -16,6 +16,17 @@ def loadPath(path):
             edfFiles.append(edf)
     return edfFiles
 
+def readHypnograms(edfFiles):
+    edf = edfFiles[0]
+    edf.open(edf.file_name)
+    y = shhsfiles.readHypnogram(edf)
+    edf._close()
+    for edf in edfFiles[1:]:
+        edf.open(edf.file_name)
+        y = np.concatenate((y, shhsfiles.readHypnogram(edf)), axis = 0)
+        edf._close()
+    return y
+
 def formatLabels(labels, total_time, time):
     """Format labels into vector where each value represents a window of
     time seconds"""
@@ -67,7 +78,6 @@ def readRawFiles(edfFiles, signals, time):
             data[signal] = np.concatenate((data[signal], data_edf[signal]), axis = 0)
         formated_labels = formatLabels(labels_edf, edf.file_duration, time)
         labels = np.concatenate((labels, formated_labels), axis = 0)
-        edf._close()
 
     return rates, data, labels
 

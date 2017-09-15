@@ -1,4 +1,5 @@
 import xml.etree.ElementTree
+import numpy as np
 
 def getSignalIndex(signal):
     return {'eeg1': 7, 
@@ -28,3 +29,14 @@ def readLabels(edf):
         if event[0].text == "Arousal ()":
             arousals.append({"start": float(event[1].text), "duration": float(event[2].text)})
     return arousals
+
+def readHypnogram(edf):
+    name = edf.file_name + ".XML"
+    root = xml.etree.ElementTree.parse(name).getroot()
+    hypnogram = np.zeros((edf.file_duration // 30, 1), dtype=np.int)
+    for i, event in enumerate(root.iter('SleepStage')):
+        stage = int(event.text)
+        hypnogram[i] = stage
+        # stage = int(event.text)
+        # print("Stage:",stage)
+    return hypnogram
