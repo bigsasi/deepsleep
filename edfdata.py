@@ -1,31 +1,37 @@
+"""Module for reading edf files"""
+import os
 import re
 import numpy as np
 import shhsfiles
-import os
 import pyedflib
 
 # Loads all the EDF files in a given path
-def loadPath(path):
+def loadEdfs(path):
     """ Returns the list of edf files in path"""
     print ("Loading EDF files from", path)
-    edfFiles = []
-    for f in os.listdir(path):
-        if isEdfFile(f):
-            edf = pyedflib.EdfReader(path + "/" + f)
+    edf_files = []
+    for file_name in os.listdir(path):
+        if isEdfFile(file_name):
+            edf = pyedflib.EdfReader(path + "/" + file_name)
             edf._close()
-            edfFiles.append(edf)
-    return edfFiles
+            edf_files.append(edf)
+    return edf_files
+
+def getNumEpochs(edfFile):
+    return edfFile.file_duration // 30
 
 def readHypnograms(edfFiles):
     edf = edfFiles[0]
     edf.open(edf.file_name)
-    y = shhsfiles.readHypnogram(edf)
+    hypnograms = shhsfiles.readHypnogram(edf)
     edf._close()
     for edf in edfFiles[1:]:
         edf.open(edf.file_name)
-        y = np.concatenate((y, shhsfiles.readHypnogram(edf)), axis = 0)
+        edf_hypno = shhsfiles.readHypnogram(edf)
+        print("{} epochs".format(len(edf_hypno)))
+        hypnograms = np.concatenate((hypnograms, edf_hypno), axis = 0)
         edf._close()
-    return y
+    return hypnograms
 
 def formatLabels(labels, total_time, time):
     """Format labels into vector where each value represents a window of
@@ -124,6 +130,10 @@ def readLabels(edf):
 def readSignals(edf, signals):
     if isSHHSedf(edf):
         return shhsfiles.readSignals(edf, signals)
+
+def readHypnogram(edf):
+    if isSHHSedf(edf):
+        return shhsfiles.readHypnogram(edf)
 
 def readRates(edf, signals):
     if isSHHSedf(edf):

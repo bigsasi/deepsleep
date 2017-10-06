@@ -26,12 +26,84 @@ def recall(y_true, y_pred):
     return recall
 
 
-def createHypnoMLPModel(X, Y):
+def mlpModel(input1_shape, layers=[4]):
+    """mlp model defined with layers list, where entry i defines the 
+    units of layer i"""
     model = Sequential()
-    model.add(Dense(input_shape = (X.shape[1],), units = 128, activation='relu'))
+    last_idx = len(layers) - 1
+    for (idx, num_units) in enumerate(layers):
+        activation_name = 'relu'
+        if idx == last_idx:
+            activation_name = 'softmax'
+        if idx == 0:
+            model.add(Dense(input_shape = input1_shape, units = num_units, activation=activation_name))
+        else:
+            model.add(Dropout(0.5))
+            model.add(Dense(units = num_units, activation=activation_name))
+    
+    model.compile(optimizer = 'adam', loss='binary_crossentropy',metrics=['acc', precision])
+    print(model.summary())
+    return model
+
+def convModel(input1_shape, layers):
+    """" convolutional model defined by layers. ith entry 
+    defines ith layer. If entry is a (x,y) it defines a conv layer
+    with x kernels and y filters. If entry is x it defines a pool layer
+    with size x"""
+    model = Sequential()
+    for (i, layer) in enumerate(layers):
+        if isinstance(layer, int):
+            model.add(MaxPool1D(layer))
+        elif len(layer) == 2:
+            if i == 0:
+                model.add(Conv1D(layer[0], layer[1], 
+                        input_shape=input1_shape, 
+                        activation='relu'))
+            else:
+                model.add(Conv1D(layer[0], layer[1], 
+                        activation='relu'))
+        else:
+            print("Hodor")
+    model.add(GlobalMaxPool1D())
     model.add(Dropout(0.5))
-    model.add(Dense( units = 5, activation='softmax'))
-    model.compile(optimizer = 'adam', loss='binary_crossentropy',metrics=['acc'])
+    model.add(Dense(4, activation='softmax'))
+
+    model.compile(loss='binary_crossentropy',
+                metrics=['accuracy',precision], 
+                optimizer=Adam(lr=3e-4))
+    print(model.inputs)
+    print(model.summary())
+    return model
+
+def convLstmModel(input1_shape, conv_layers, lstm_layers):
+    """ conv + lstm model. conv_layers defines the conv model and 
+    lstm_layers the following lstm model"""
+    model = Sequential()
+    for (i, layer) in enumerate(conv_layers):
+        if isinstance(layer, int):
+            model.add(MaxPool1D(layer))
+        elif len(layer) == 2:
+            if i == 0:
+                model.add(Conv1D(layer[0], layer[1], 
+                        input_shape=input1_shape, 
+                        activation='relu'))
+            else:
+                model.add(Conv1D(layer[0], layer[1], 
+                        activation='relu'))
+        else:
+            print("Hodor")
+    for (i, layer) in enumerate(lstm_layers):
+        if i == len(lstm_layers) - 1:
+            model.add(LSTM(layer))
+        else:
+            model.add(LSTM(layer, return_sequences=True))
+    model.add(Dropout(0.5))
+    model.add(Dense(4, activation='softmax'))
+
+    model.compile(loss='binary_crossentropy',
+                metrics=['accuracy',precision], 
+                optimizer=Adam(lr=3e-4))
+    print(model.inputs)
     print(model.summary())
     return model
 
@@ -82,9 +154,7 @@ def properHypnoConv(X, Y,input_shape):
     model = Sequential()
     model.add(Conv1D(64, 30, activation='relu', input_shape=input_shape))
     model.add(Conv1D(64, 10, activation='relu'))
-    model.add(Conv1D(64, 10, activation='relu'))
     model.add(MaxPooling1D(30))
-    model.add(Conv1D(128, 3, activation='relu'))
     model.add(Conv1D(128, 3, activation='relu'))
     model.add(Conv1D(128, 3, activation='relu'))
     model.add(GlobalAveragePooling1D())
