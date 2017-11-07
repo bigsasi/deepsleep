@@ -57,10 +57,10 @@ def convModel(input1_shape, layers):
         elif len(layer) == 2:
             if i == 0:
                 model.add(Conv1D(layer[0], layer[1], 
-                        input_shape=input1_shape, 
+                        input_shape=input1_shape, padding='same',
                         activation='relu'))
             else:
-                model.add(Conv1D(layer[0], layer[1], 
+                model.add(Conv1D(layer[0], layer[1], padding='same',
                         activation='relu'))
         else:
             print("Hodor")
