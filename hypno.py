@@ -1,3 +1,4 @@
+import ConfigParser
 import pyedflib
 import numpy as np
 import os
@@ -62,13 +63,16 @@ def prepare_data(X, Y, signals, signals_rate, timeWindow):
     return X, Y
 
 def main():
-    EDF_PATH = "/home/sasi/edf/SHHS-250"
-    PICKLE_PATH = "/home/sasi/edf/pickle"
+    config = ConfigParser.ConfigParser()
+    config.read('config.ini')
+    edf_path = config.get('paths', 'edf')
+    pickle_path = config.get('paths', 'pickle')
+
     SIGNALS = ['eeg1', 'eeg2', 'emg', 'eogr', 'eogl']
     signals_rate = {'eeg1': 125, 'eeg2': 125, 'emg':125, 'eogr':50, 'eogl':50}
     time_window = 30 #time in seconds
 
-    dataset = Dataset(EDF_PATH, PICKLE_PATH, SIGNALS)
+    dataset = Dataset(edf_path, pickle_path, SIGNALS)
     dataset.load()
     
     x_test, y_test = dataset.test_set()
