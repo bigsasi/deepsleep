@@ -4,6 +4,7 @@ import numpy as np
 import edfdata
 import sys
 from utils import tensor_padding
+from keras.utils.np_utils import to_categorical
 
 def load_edf_save_pickle(edf, signals, pickle_file):
     edf.open(edf.file_name)
@@ -19,24 +20,74 @@ def load_edf_save_pickle(edf, signals, pickle_file):
     f.close()
     return [raw_signals, signals_rate, hypnogram, arousals]
 
+def reshape_3d(x, rate, time_window):
+    x_shape = x.shape
+    shape1 = rate * time_window
+    shape0 = x_shape[0] // shape1
+    shape2 = x_shape[1]
+    X = np.reshape(x, (shape0, shape1, shape2))
+    return X
+
+def prepare_data(X, Y, timeWindow):
+    # Basic transformations to hypnogram
+    Y[Y == 2] = 1 # merge N1 and N2
+    Y[Y == 3] = 2 # merge stage 3 & 4 and move to number 2
+    Y[Y == 4] = 2 
+    Y[Y >= 5] = 3 # move rem to number 3
+
+    X = reshape_3d(X, 125, timeWindow)
+       
+    # window normalization:
+    for idx in [0, 1, 3, 4]:
+        signal = X[:, :, idx]
+        mean_x = np.mean(signal, 1)
+        std_x = np.std(signal, 1)
+        mean_x = np.reshape(mean_x, (mean_x.shape[0], 1))
+        std_x = np.reshape(std_x, (std_x.shape[0], 1))
+        signal -= mean_x
+        signal /= std_x
+        X[:, :, idx] = signal
+        
+    # signal normalization:
+    for idx in [2]:
+        signal = X[:, :, idx]
+        mean_x = np.mean(signal)
+        std_x = np.std(signal)
+        signal -= mean_x
+        signal /= std_x
+        X[:, :, idx] = signal
+        
+    return X, Y
+
+
 class Dataset:
 
-    def __init__(self, edf_path, pckl_path, signals):
+    signals = ['eeg1', 'eeg2', 'emg', 'eogr', 'eogl']
+    train_files = 10
+    validation_files = 10
+    test_files = 1
+    reference_rate = 125
+    window_length = 30
+
+    @staticmethod
+    def sample_shape():
+        return (Dataset.reference_rate * Dataset.window_length, len(Dataset.signals))
+
+    def __init__(self, edf_path, pckl_path, batch_size=360, files_in_memory=10):
         self.edf_path = edf_path
         self.pckl_path = pckl_path
-        self.signals = signals
         self.edf_files = []
         self.edf_duration = []
         self.total_seconds = 0
         self.total_epochs = 0
-        self.train_files = 10
-        self.test_files = 10
-        self.batch_size = 50
-        self.validation_files = 10
-        self.current_batch = 0
-        self.reference_rate = 125
+        self.batch_size = batch_size
+        self.files_in_memory = files_in_memory
+        # From all the files in memory just load 6 hours  (6 * 60 * 2 samples)
+        self.max_samples = self.files_in_memory * 6 * 60 * 2
+        self.shuffle = True
+        self.__load()
 
-    def load(self):
+    def __load(self):
         self.edf_files = edfdata.loadEdfs(self.edf_path)
         total_files = self.train_files + self.test_files + self.validation_files
         
@@ -49,32 +100,60 @@ class Dataset:
 
         self.total_seconds = np.sum(self.edf_duration)
         self.total_epochs = self.total_seconds // 30
-        
-    def configure(self, train, test, validation, batch_size=50):
-        self.train_files = train
-        self.test_files = test
-        self.validation_files = validation
-        self.batch_size = batch_size
 
     def signal_index(self, signal):
         for (i, s) in enumerate(self.signals):
             if s == signal:
                 return i
         return -1 
+    
+    def __get_exploration_order(self, num_items):
+        'Generates order of exploration'
+        # Find exploration order
+        indexes = np.arange(num_items)
+        if self.shuffle:
+            np.random.shuffle(indexes)
 
-    def __load_set(self, files_slice):
+        return indexes
 
-        edf_duration = self.edf_duration[files_slice]
+    def generator(self, files, name="default_generator"):
+        while 1:
+            indexes = self.__get_exploration_order(len(files))
+        
+            # Generate batches
+            imax = len(indexes) // self.files_in_memory
+            for i in range(imax):
+                # Load files_in_memory files
+                files_selected = [files[k] for k in indexes[i*self.files_in_memory:(i+1)*self.files_in_memory]]
+                X, y = self.load_set(files_selected)
+                X, y = prepare_data(X, y, 30)
+                y_cat = to_categorical(y)
+
+                # Limit number of samples to avoid problems with different duration between files
+                batch_indexes = self.__get_exploration_order(len(y))[:self.max_samples]     
+                jmax = self.max_samples // self.batch_size
+                for j in range(jmax):
+                    # Select batch_size samples
+                    batches = batch_indexes[j * self.batch_size:(j + 1) * self.batch_size]
+                    yield X[batches, :, :], y_cat[batches, :]
+
+
+    def steps_per_epoch(self, files):
+        return (len(files) // self.files_in_memory) * (self.max_samples // self.batch_size)
+
+    def load_set(self, files_list):
+
+        edf_duration = self.edf_duration[files_list]
         seconds = np.sum(edf_duration)
         epochs = seconds // 30
 
         X = np.empty((seconds * 125, len(self.signals)), dtype=np.float32)
         Y = np.zeros((int(epochs), 1))
 
-        for (i, edf) in enumerate(self.edf_files[files_slice]):
+        for (i, file_idx) in enumerate(files_list):
+            edf = self.edf_files[file_idx]
             edf_file_name = edf.file_name[len(self.edf_path) + 1:-4]
             pickle_file = self.pckl_path + "/" + edf_file_name + ".pckl"
-            print("Loading file {}: {}".format(files_slice.start + i + 1, edf_file_name))
             try:
                 f = open(pickle_file, 'rb')
                 [raw_signals, signals_rate, hypnogram, arousals] = pickle.load(f)
@@ -100,54 +179,22 @@ class Dataset:
 
         return X, Y
 
-    def has_next_batch(self, train_and_validation=True):
-        if train_and_validation:
-            total = self.train_files + self.test_files
-        else:
-            total = self.train_files
-
-        return self.current_batch + self.batch_size <= total
-
-    def next_batch(self, train_and_validation=True):
-        if train_and_validation:
-            slice = self.__train_and_validation_slice()
-        else:
-            slice = self.__train_slice()
-        start = self.current_batch
-        num_files = self.batch_size
-        self.current_batch += num_files
-        batch_slice = slice[start:start + num_files]
-        return self.__load_set(batch_slice)
-
-    def test_set(self):
-        return self.__load_set(self.__test_slice())
-
-    def validation_set(self):
-        return self.__load_set(self.__validation_slice())
-
-    def train_set(self):
-        return self.__load_set(self.__train_slice())
-
-    def train_and_validation_set(self):
-        return self.__load_set(self.__train_and_validation_slice())
-
-    def __validation_slice(self):
+    def validation_list(self):
         start = self.test_files
         num_files = self.validation_files
-        return slice(start, start + num_files)
+        return np.arange(start, start + num_files)
 
-    def __test_slice(self):
+    def test_list(self):
         start = 0
         num_files = self.test_files
-        return slice(start, start + num_files)
+        return np.arange(start, start + num_files)
 
-    def __train_slice(self):
+    def train_list(self):
         start = self.validation_files + self.test_files
         num_files = self.train_files
-        return slice(start, start + num_files)
+        return np.arange(start, start + num_files)
 
-
-    def __train_and_validation_slice(self):
+    def train_and_validation_list(self):
         start = self.test_files
         num_files = self.train_files + self.validation_files
-        return slice(start, start + num_files)
+        return np.arange(start, start + num_files)

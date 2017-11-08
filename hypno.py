@@ -72,20 +72,23 @@ def main():
     signals_rate = {'eeg1': 125, 'eeg2': 125, 'emg':125, 'eogr':50, 'eogl':50}
     time_window = 30 #time in seconds
 
-    dataset = Dataset(edf_path, pickle_path, SIGNALS)
-    dataset.load()
+    dataset = Dataset(edf_path, pickle_path)
     
-    x_test, y_test = dataset.test_set()
+    test_list = dataset.test_list()
+    train_list = dataset.train_list()
+    validation_list = dataset.validation_list()
+
+    x_test, y_test = dataset.load_set(test_list)
     x_test, y_test = prepare_data(x_test, y_test, SIGNALS, signals_rate, time_window)
     
-    x_train, y_train = dataset.train_and_validation_set()
-    x_train, y_train = prepare_data(x_train, y_train, SIGNALS, signals_rate, time_window)
+    # x_train, y_train = dataset.train_and_validation_set()
+    # x_train, y_train = prepare_data(x_train, y_train, SIGNALS, signals_rate, time_window)
     
     max_epochs = 50
-    y_cat = to_categorical(y_train)
+    # y_cat = to_categorical(y_train)
     
     mlp_layers = []
-    mlp_layers.append([4])
+    # mlp_layers.append([4])
     # mlp_layers.append([16, 4])
     # mlp_layers.append([32, 4])
     # mlp_layers.append([64, 4])
@@ -109,7 +112,8 @@ def main():
         print_validation(y_test.flatten(), preds)
 
     conv_layers = []
-    conv_layers.append([(128,20), (128,20), 20, (256,20)])
+    # conv_layers.append([(128,20), (128,20), 20, (256,20)])
+    conv_layers.append([(32,2)])
     # for k in [64, 128, 256]:
     #     for f in [3, 25, 50, 75, 125, 250][-2:]: # run only with 2 last f
     #         conv_layers.append([(k, f)])
@@ -133,10 +137,16 @@ def main():
     #     for pool in [30]:
     #         conv_layers.append([(256, f), pool, (512, f), pool])
 
+    input1_shape = Dataset.sample_shape()
     for layers in conv_layers:
         callbacks = define_callbacks('conv' + str(layers))
-        model = hypnomodel.convModel(input1_shape=(x_train.shape[1], x_train.shape[2]), layers=layers)
-        model.fit(x_train, y_cat, epochs=max_epochs, validation_split=0.1, callbacks=callbacks)
+        model = hypnomodel.convModel(input1_shape=input1_shape, layers=layers)
+        model.fit_generator(generator=dataset.generator(train_list, 'train_generator'),
+                    steps_per_epoch=dataset.steps_per_epoch(train_list),
+                    validation_data=dataset.generator(validation_list, 'validation_generator'),
+                    validation_steps=dataset.steps_per_epoch(validation_list),
+                    callbacks=callbacks,
+                    epochs=max_epochs)
         preds = model.predict(x_test)
         preds = np.argmax(preds, axis=1)
         print_validation(y_test.flatten(), preds)
@@ -148,15 +158,15 @@ def main():
     # lstm_layers.append([32, 16])
     # lstm_layers.append([64, 32])
     
-    for conv_layer in conv_layers:
-        for lstm_layer in lstm_layers:
-            callbacks = define_callbacks('convlstm' + str(conv_layer) + str(lstm_layer))
-            model = hypnomodel.convLstmModel(input1_shape=(x_train.shape[1], x_train.shape[2]), 
-                conv_layers=conv_layer, lstm_layers=lstm_layer)
-            model.fit(x_train, y_cat, epochs=max_epochs, validation_split=0.1, callbacks=callbacks)
-            preds = model.predict(x_test)
-            preds = np.argmax(preds, axis=1)
-            print_validation(y_test.flatten(), preds)
+    # for conv_layer in conv_layers:
+    #     for lstm_layer in lstm_layers:
+    #         callbacks = define_callbacks('convlstm' + str(conv_layer) + str(lstm_layer))
+    #         model = hypnomodel.convLstmModel(input1_shape=(x_train.shape[1], x_train.shape[2]), 
+    #             conv_layers=conv_layer, lstm_layers=lstm_layer)
+    #         model.fit(x_train, y_cat, epochs=max_epochs, validation_split=0.1, callbacks=callbacks)
+    #         preds = model.predict(x_test)
+    #         preds = np.argmax(preds, axis=1)
+    #         print_validation(y_test.flatten(), preds)
 
 
 if __name__ == '__main__':
