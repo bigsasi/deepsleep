@@ -1,9 +1,11 @@
-import ConfigParser
+try:
+    import ConfigParser as configparser
+except ImportError:
+    import configparser
 import pyedflib
 import numpy as np
 import os
 import sys
-import pickle
 import shhsfiles
 import edfdata
 import scipy.signal
@@ -50,7 +52,7 @@ def prepare_data(X, Y, signals, signals_rate, timeWindow):
         meanX = np.mean(signal, 1)
         stdX = np.std(signal, 1)
         meanX = np.reshape(meanX, (meanX.shape[0], 1))
-        stdX = np.reshape(stdX, (stdX.shape[0], 1))1
+        stdX = np.reshape(stdX, (stdX.shape[0], 1))
         signal -= meanX
         signal /= stdX
         X[:, :, idx] = signal
@@ -67,7 +69,7 @@ def prepare_data(X, Y, signals, signals_rate, timeWindow):
     return X, Y
 
 def main():
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read('config.ini')
     edf_path = config.get('paths', 'edf')
     pickle_path = config.get('paths', 'pickle')
@@ -79,17 +81,30 @@ def main():
     dataset = Dataset(edf_path, pickle_path, SIGNALS)
     dataset.load()
     
-    x_test, y_test = dataset.test_set()
+    test_list = dataset.test_list()
+    train_and_validation_list = dataset.train_and_validation_list()
+
+    x_test, y_test = dataset.load_set(test_list)
     x_test, y_test = prepare_data(x_test, y_test, SIGNALS, signals_rate, time_window)
     
-    x_train, y_train = dataset.train_and_validation_set()
+    x_train, y_train = dataset.load_set(train_and_validation_list)
     x_train, y_train = prepare_data(x_train, y_train, SIGNALS, signals_rate, time_window)
     
+    print("Train set:")
+    for file_id in train_and_validation_list:
+        edf_file_name = dataset.edf_files[file_id].file_name[len(edf_path) + 1:-4]
+        print(edf_file_name)
+
+    print("Test set:")
+    for file_id in test_list:
+        edf_file_name = dataset.edf_files[file_id].file_name[len(edf_path) + 1:-4]
+        print(edf_file_name)
+
     max_epochs = 50
     y_cat = to_categorical(y_train)
     
     mlp_layers = []
-    mlp_layers.append([4])
+    # mlp_layers.append([4])
     # mlp_layers.append([16, 4])
     # mlp_layers.append([32, 4])
     # mlp_layers.append([64, 4])
@@ -137,6 +152,8 @@ def main():
     #     for pool in [30]:
     #         conv_layers.append([(256, f), pool, (512, f), pool])
 
+    test_durations = dataset.edf_duration[test_list]
+
     for layers in conv_layers:
         callbacks = define_callbacks('conv' + str(layers))
         model = hypnomodel.convModel(input1_shape=(x_train.shape[1], x_train.shape[2]), layers=layers)
@@ -144,6 +161,15 @@ def main():
         preds = model.predict(x_test)
         preds = np.argmax(preds, axis=1)
         print_validation(y_test.flatten(), preds)
+
+        for (i, file_id) in enumerate(test_list):
+            first_second = np.sum(test_durations[:i])
+            last_second = first_second + test_durations[i]
+            first_epoch = first_second // 30
+            last_epoch = last_second // 30
+            file_preds = preds[first_epoch:last_epoch] 
+            file_y_test = y_test[first_epoch:last_epoch]
+            print_validation(file_y_test.flatten(), file_preds)
         
     lstm_layers = []
     # lstm_layers.append([16])
