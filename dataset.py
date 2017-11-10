@@ -37,25 +37,25 @@ def prepare_data(X, Y, timeWindow):
 
     X = reshape_3d(X, 125, timeWindow)
        
-    # window normalization:
-    for idx in [0, 1, 3, 4]:
-        signal = X[:, :, idx]
-        mean_x = np.mean(signal, 1)
-        std_x = np.std(signal, 1)
-        mean_x = np.reshape(mean_x, (mean_x.shape[0], 1))
-        std_x = np.reshape(std_x, (std_x.shape[0], 1))
-        signal -= mean_x
-        signal /= std_x
-        X[:, :, idx] = signal
+    # # window normalization:
+    # for idx in [0, 1, 3, 4]:
+    #     signal = X[:, :, idx]
+    #     mean_x = np.mean(signal, 1)
+    #     std_x = np.std(signal, 1)
+    #     mean_x = np.reshape(mean_x, (mean_x.shape[0], 1))
+    #     std_x = np.reshape(std_x, (std_x.shape[0], 1))
+    #     signal -= mean_x
+    #     signal /= std_x
+    #     X[:, :, idx] = signal
         
-    # signal normalization:
-    for idx in [2]:
-        signal = X[:, :, idx]
-        mean_x = np.mean(signal)
-        std_x = np.std(signal)
-        signal -= mean_x
-        signal /= std_x
-        X[:, :, idx] = signal
+    # # signal normalization:
+    # for idx in [2]:
+    #     signal = X[:, :, idx]
+    #     mean_x = np.mean(signal)
+    #     std_x = np.std(signal)
+    #     signal -= mean_x
+    #     signal /= std_x
+    #     X[:, :, idx] = signal
         
     return X, Y
 
@@ -63,9 +63,9 @@ def prepare_data(X, Y, timeWindow):
 class Dataset:
 
     signals = ['eeg1', 'eeg2', 'emg', 'eogr', 'eogl']
-    train_files = 10
-    validation_files = 10
-    test_files = 1
+    train_files = 180
+    validation_files = 20
+    test_files = 50
     reference_rate = 125
     window_length = 30
 
@@ -166,6 +166,10 @@ class Dataset:
 
             for signal in self.signals:
                 rate = signals_rate[signal]
+                mean_signal = np.mean(raw_signals[signal])
+                std_signal = np.std(raw_signals[signal]) 
+                raw_signals[signal] -= mean_signal
+                raw_signals[signal] /= std_signal
                 if rate != self.reference_rate:
                     shape1 = rate * 30
                     shape0 = raw_signals[signal].shape[0] // shape1
@@ -178,6 +182,55 @@ class Dataset:
             Y[first_epoch:last_epoch] = hypnogram
 
         return X, Y
+
+    def mean_and_deviation(self, files_list):
+        num_signals = len(self.signals)
+        sums = {}
+        lens = {}
+        means = {}
+        diffs = {}
+        stds = {}
+        for signal in self.signals:
+            sums[signal] = 0
+            lens[signal] = 0
+            means[signal] = 0
+            diffs[signal] = 0
+            stds[signal] = 0
+
+        for (i, file_idx) in enumerate(files_list):
+            edf = self.edf_files[file_idx]
+            edf_file_name = edf.file_name[len(self.edf_path) + 1:-4]
+            pickle_file = self.pckl_path + "/" + edf_file_name + ".pckl"
+            try:
+                f = open(pickle_file, 'rb')
+                [raw_signals, signals_rate, hypnogram, arousals] = pickle.load(f)
+                f.close()
+            except IOError:
+                [raw_signals, signals_rate, hypnogram, arousals] = load_edf_save_pickle(edf, self.signals, pickle_file)
+            for signal in self.signals:
+                sums[signal] += np.sum(raw_signals[signal])
+                lens[signal] += np.sum(len(raw_signals[signal]))
+        
+        for signal in self.signals:
+            means[signal] = sums[signal] / lens[signal]
+
+        for (i, file_idx) in enumerate(files_list):
+            edf = self.edf_files[file_idx]
+            edf_file_name = edf.file_name[len(self.edf_path) + 1:-4]
+            pickle_file = self.pckl_path + "/" + edf_file_name + ".pckl"
+            try:
+                f = open(pickle_file, 'rb')
+                [raw_signals, signals_rate, hypnogram, arousals] = pickle.load(f)
+                f.close()
+            except IOError:
+                [raw_signals, signals_rate, hypnogram, arousals] = load_edf_save_pickle(edf, self.signals, pickle_file)
+            for signal in self.signals:
+                diffs[signal] += np.sum(np.square(raw_signals[signal] - means[signal]))
+
+        for signal in self.signals:
+            stds[signal] = np.sqrt(diffs[signal] / (lens[signal] - 1))
+
+        return means, stds
 
     def validation_list(self):
         start = self.test_files
