@@ -45,24 +45,24 @@ def prepare_data(X, Y, signals, signals_rate, timeWindow):
     X = reshape_3d(X, 125, timeWindow)
        
     # window normalization:
-    for idx in [0, 1, 3, 4]:
-        signal = X[:, :, idx]
-        meanX = np.mean(signal, 1)
-        stdX = np.std(signal, 1)
-        meanX = np.reshape(meanX, (meanX.shape[0], 1))
-        stdX = np.reshape(stdX, (stdX.shape[0], 1))1
-        signal -= meanX
-        signal /= stdX
-        X[:, :, idx] = signal
+    # for idx in [0, 1, 3, 4]:
+    #     signal = X[:, :, idx]
+    #     meanX = np.mean(signal, 1)
+    #     stdX = np.std(signal, 1)
+    #     meanX = np.reshape(meanX, (meanX.shape[0], 1))
+    #     stdX = np.reshape(stdX, (stdX.shape[0], 1))1
+    #     signal -= meanX
+    #     signal /= stdX
+    #     X[:, :, idx] = signal
 
-    # signal normalization:
-    for idx in [2]:
-        signal = X[:, :, idx]
-        meanX = np.mean(signal)
-        stdX = np.std(signal)
-        signal -= meanX
-        signal /= stdX
-        X[:, :, idx] = signal
+    # # signal normalization:
+    # for idx in [2]:
+    #     signal = X[:, :, idx]
+    #     meanX = np.mean(signal)
+    #     stdX = np.std(signal)
+    #     signal -= meanX
+    #     signal /= stdX
+    #     X[:, :, idx] = signal
 
     return X, Y
 
