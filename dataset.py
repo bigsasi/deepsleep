@@ -1,8 +1,10 @@
-#import cPickle as pickle
-import pickle
+import sys
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import numpy as np
 import edfdata
-import sys
 from utils import tensor_padding
 
 def load_edf_save_pickle(edf, signals, pickle_file):
@@ -29,10 +31,10 @@ class Dataset:
         self.edf_duration = []
         self.total_seconds = 0
         self.total_epochs = 0
-        self.train_files = 10
-        self.test_files = 10
+        self.train_files = 180
+        self.test_files = 50
         self.batch_size = 50
-        self.validation_files = 10
+        self.validation_files = 20
         self.current_batch = 0
         self.reference_rate = 125
 
@@ -62,19 +64,20 @@ class Dataset:
                 return i
         return -1 
 
-    def __load_set(self, files_slice):
+    def load_set(self, files_list):
 
-        edf_duration = self.edf_duration[files_slice]
+        edf_duration = self.edf_duration[files_list]
         seconds = np.sum(edf_duration)
         epochs = seconds // 30
 
         X = np.empty((seconds * 125, len(self.signals)), dtype=np.float32)
         Y = np.zeros((int(epochs), 1))
 
-        for (i, edf) in enumerate(self.edf_files[files_slice]):
+        for (i, file_id) in enumerate(files_list):
+            edf = self.edf_files[file_id]
             edf_file_name = edf.file_name[len(self.edf_path) + 1:-4]
             pickle_file = self.pckl_path + "/" + edf_file_name + ".pckl"
-            print("Loading file {}: {}".format(files_slice.start + i + 1, edf_file_name))
+            print("Loading file {}: {}".format(file_id, edf_file_name))
             try:
                 f = open(pickle_file, 'rb')
                 [raw_signals, signals_rate, hypnogram, arousals] = pickle.load(f)
@@ -104,54 +107,24 @@ class Dataset:
 
         return X, Y
 
-    def has_next_batch(self, train_and_validation=True):
-        if train_and_validation:
-            total = self.train_files + self.test_files
-        else:
-            total = self.train_files
-
-        return self.current_batch + self.batch_size <= total
-
-    def next_batch(self, train_and_validation=True):
-        if train_and_validation:
-            slice = self.__train_and_validation_slice()
-        else:
-            slice = self.__train_slice()
-        start = self.current_batch
-        num_files = self.batch_size
-        self.current_batch += num_files
-        batch_slice = slice[start:start + num_files]
-        return self.__load_set(batch_slice)
-
-    def test_set(self):
-        return self.__load_set(self.__test_slice())
-
-    def validation_set(self):
-        return self.__load_set(self.__validation_slice())
-
-    def train_set(self):
-        return self.__load_set(self.__train_slice())
-
-    def train_and_validation_set(self):
-        return self.__load_set(self.__train_and_validation_slice())
-
-    def __validation_slice(self):
+    def validation_list(self):
         start = self.test_files
         num_files = self.validation_files
-        return slice(start, start + num_files)
+        return np.arange(start, start + num_files)
 
-    def __test_slice(self):
+    def test_list(self):
         start = 0
         num_files = self.test_files
-        return slice(start, start + num_files)
+        return np.arange(start, start + num_files)
 
-    def __train_slice(self):
+    def train_list(self):
         start = self.validation_files + self.test_files
         num_files = self.train_files
-        return slice(start, start + num_files)
+        return np.arange(start, start + num_files)
 
-
-    def __train_and_validation_slice(self):
+    def train_and_validation_list(self):
         start = self.test_files
         num_files = self.train_files + self.validation_files
-        return slice(start, start + num_files)
+        return np.arange(start, start + num_files)
+
+
