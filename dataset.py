@@ -1,8 +1,9 @@
-#import cPickle as pickle
-import pickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import numpy as np
 import edfdata
-import sys
 from utils import tensor_padding
 from keras.utils.np_utils import to_categorical
 
@@ -73,7 +74,7 @@ class Dataset:
     def sample_shape():
         return (Dataset.reference_rate * Dataset.window_length, len(Dataset.signals))
 
-    def __init__(self, edf_path, pckl_path, batch_size=360, files_in_memory=10):
+    def __init__(self, edf_path, pckl_path, batch_size=32):
         self.edf_path = edf_path
         self.pckl_path = pckl_path
         self.edf_files = []
@@ -81,11 +82,11 @@ class Dataset:
         self.total_seconds = 0
         self.total_epochs = 0
         self.batch_size = batch_size
-        self.files_in_memory = files_in_memory
         # From all the files in memory just load 6 hours  (6 * 60 * 2 samples)
-        self.max_samples = self.files_in_memory * 6 * 60 * 2
+        self.max_samples = 6 * 60 * 2
         self.shuffle = True
         self.__load()
+        self.means, self.stds = self.mean_and_deviation(self.train_list())
 
     def __load(self):
         self.edf_files = edfdata.loadEdfs(self.edf_path)
@@ -116,30 +117,30 @@ class Dataset:
 
         return indexes
 
-    def generator(self, files, name="default_generator"):
+    def generator(self, files, num_files_loaded, name):
         while 1:
             indexes = self.__get_exploration_order(len(files))
         
             # Generate batches
-            imax = len(indexes) // self.files_in_memory
+            imax = len(indexes) // num_files_loaded
             for i in range(imax):
                 # Load files_in_memory files
-                files_selected = [files[k] for k in indexes[i*self.files_in_memory:(i+1)*self.files_in_memory]]
+                files_selected = [files[k] for k in indexes[i*num_files_loaded:(i+1)*num_files_loaded]]
                 X, y = self.load_set(files_selected)
                 X, y = prepare_data(X, y, 30)
                 y_cat = to_categorical(y)
 
                 # Limit number of samples to avoid problems with different duration between files
-                batch_indexes = self.__get_exploration_order(len(y))[:self.max_samples]     
-                jmax = self.max_samples // self.batch_size
+                batch_indexes = self.__get_exploration_order(len(y))[:self.max_samples * num_files_loaded]     
+                jmax = (self.max_samples * num_files_loaded) // self.batch_size
                 for j in range(jmax):
                     # Select batch_size samples
                     batches = batch_indexes[j * self.batch_size:(j + 1) * self.batch_size]
                     yield X[batches, :, :], y_cat[batches, :]
 
 
-    def steps_per_epoch(self, files):
-        return (len(files) // self.files_in_memory) * (self.max_samples // self.batch_size)
+    def steps_per_epoch(self, files, num_files_loaded):
+        return (len(files) // num_files_loaded) * ((self.max_samples * num_files_loaded) // self.batch_size)
 
     def load_set(self, files_list):
 
@@ -166,10 +167,10 @@ class Dataset:
 
             for signal in self.signals:
                 rate = signals_rate[signal]
-                mean_signal = np.mean(raw_signals[signal])
-                std_signal = np.std(raw_signals[signal]) 
-                raw_signals[signal] -= mean_signal
-                raw_signals[signal] /= std_signal
+                # mean_signal = np.mean(raw_signals[signal])
+                # std_signal = np.std(raw_signals[signal]) 
+                raw_signals[signal] -= self.means[signal] #mean_signal
+                raw_signals[signal] /= self.stds[signal] #std_signal
                 if rate != self.reference_rate:
                     shape1 = rate * 30
                     shape0 = raw_signals[signal].shape[0] // shape1
@@ -184,7 +185,6 @@ class Dataset:
         return X, Y
 
     def mean_and_deviation(self, files_list):
-        num_signals = len(self.signals)
         sums = {}
         lens = {}
         means = {}
