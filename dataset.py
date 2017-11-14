@@ -250,3 +250,9 @@ class Dataset:
         start = self.test_files
         num_files = self.train_files + self.validation_files
         return np.arange(start, start + num_files)
+
+    def print_set(self, files_list, name):
+        print("Dataset: {}".format(name))
+        for file_id in files_list:
+            edf_file_name = self.edf_files[file_id].file_name[len(self.edf_path) + 1:-4]
+            print(edf_file_name)

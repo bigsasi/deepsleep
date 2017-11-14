@@ -32,20 +32,9 @@ def main():
     train_list = dataset.train_list()
     validation_list = dataset.validation_list()
    
-    print("Train set:")
-    for file_id in train_list:
-        edf_file_name = dataset.edf_files[file_id].file_name[len(edf_path) + 1:-4]
-        print(edf_file_name)
-
-    print("Validation set:")
-    for file_id in validation_list:
-        edf_file_name = dataset.edf_files[file_id].file_name[len(edf_path) + 1:-4]
-        print(edf_file_name)
-
-    print("Test set:")
-    for file_id in test_list:
-        edf_file_name = dataset.edf_files[file_id].file_name[len(edf_path) + 1:-4]
-        print(edf_file_name)
+    dataset.print_set(train_list, "train")
+    dataset.print_set(validation_list, "validation")
+    dataset.print_set(test_list, "test")
 
     max_epochs = 50
 
