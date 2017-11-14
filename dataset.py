@@ -29,14 +29,14 @@ def reshape_3d(x, rate, time_window):
     X = np.reshape(x, (shape0, shape1, shape2))
     return X
 
-def prepare_data(X, Y, timeWindow):
+def prepare_data(X, Y):
     # Basic transformations to hypnogram
     Y[Y == 2] = 1 # merge N1 and N2
     Y[Y == 3] = 2 # merge stage 3 & 4 and move to number 2
     Y[Y == 4] = 2 
     Y[Y >= 5] = 3 # move rem to number 3
 
-    X = reshape_3d(X, 125, timeWindow)
+    X = reshape_3d(X, Dataset.reference_rate, Dataset.window_length)
        
     # # window normalization:
     # for idx in [0, 1, 3, 4]:
@@ -69,6 +69,7 @@ class Dataset:
     test_files = 50
     reference_rate = 125
     window_length = 30
+    max_samples = 6 * 60 * 2
 
     @staticmethod
     def sample_shape():
@@ -82,8 +83,6 @@ class Dataset:
         self.total_seconds = 0
         self.total_epochs = 0
         self.batch_size = batch_size
-        # From all the files in memory just load 6 hours  (6 * 60 * 2 samples)
-        self.max_samples = 6 * 60 * 2
         self.shuffle = True
         self.__load()
         self.means, self.stds = self.mean_and_deviation(self.train_list())
@@ -127,12 +126,12 @@ class Dataset:
                 # Load files_in_memory files
                 files_selected = [files[k] for k in indexes[i*num_files_loaded:(i+1)*num_files_loaded]]
                 X, y = self.load_set(files_selected)
-                X, y = prepare_data(X, y, 30)
+                X, y = prepare_data(X, y)
                 y_cat = to_categorical(y)
 
                 # Limit number of samples to avoid problems with different duration between files
-                batch_indexes = self.__get_exploration_order(len(y))[:self.max_samples * num_files_loaded]     
-                jmax = (self.max_samples * num_files_loaded) // self.batch_size
+                batch_indexes = self.__get_exploration_order(len(y))[:Dataset.max_samples * num_files_loaded]     
+                jmax = (Dataset.max_samples * num_files_loaded) // self.batch_size
                 for j in range(jmax):
                     # Select batch_size samples
                     batches = batch_indexes[j * self.batch_size:(j + 1) * self.batch_size]
@@ -140,7 +139,7 @@ class Dataset:
 
 
     def steps_per_epoch(self, files, num_files_loaded):
-        return (len(files) // num_files_loaded) * ((self.max_samples * num_files_loaded) // self.batch_size)
+        return (len(files) // num_files_loaded) * ((Dataset.max_samples * num_files_loaded) // self.batch_size)
 
     def load_set(self, files_list):
 
@@ -148,7 +147,7 @@ class Dataset:
         seconds = np.sum(edf_duration)
         epochs = seconds // 30
 
-        X = np.empty((seconds * 125, len(self.signals)), dtype=np.float32)
+        X = np.empty((seconds * Dataset.reference_rate, len(self.signals)), dtype=np.float32)
         Y = np.zeros((int(epochs), 1))
 
         for (i, file_idx) in enumerate(files_list):

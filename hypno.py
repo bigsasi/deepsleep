@@ -5,6 +5,7 @@ except ImportError:
 import numpy as np
 import hypnomodel
 from dataset import Dataset
+from dataset import prepare_data
 from keras.callbacks import EarlyStopping
 from keras.callbacks import ModelCheckpoint
 from utils import print_validation
@@ -18,24 +19,6 @@ def define_callbacks(file_name):
     ]
     return callbacks
 
-def reshape_3d(x, rate, time_window):
-    x_shape = x.shape
-    shape1 = rate * time_window
-    shape0 = x_shape[0] // shape1
-    shape2 = x_shape[1]
-    X = np.reshape(x, (shape0, shape1, shape2))
-    return X
-
-def prepare_data(X, Y, timeWindow):
-    # Basic transformations to hypnogram
-    Y[Y == 2] = 1 # merge N1 and N2
-    Y[Y == 3] = 2 # merge stage 3 & 4 and move to number 2
-    Y[Y == 4] = 2 
-    Y[Y >= 5] = 3 # move rem to number 3
-
-    X = reshape_3d(X, 125, timeWindow)
-
-    return X, Y
 
 def main():
     config = configparser.ConfigParser()
@@ -43,16 +26,27 @@ def main():
     edf_path = config.get('paths', 'edf')
     pickle_path = config.get('paths', 'pickle')
 
-    SIGNALS = ['eeg1', 'eeg2', 'emg', 'eogr', 'eogl']
-    signals_rate = {'eeg1': 125, 'eeg2': 125, 'emg':125, 'eogr':50, 'eogl':50}
-    time_window = 30 #time in seconds
-
     dataset = Dataset(edf_path, pickle_path)
     
     test_list = dataset.test_list()
     train_list = dataset.train_list()
     validation_list = dataset.validation_list()
    
+    print("Train set:")
+    for file_id in train_list:
+        edf_file_name = dataset.edf_files[file_id].file_name[len(edf_path) + 1:-4]
+        print(edf_file_name)
+
+    print("Validation set:")
+    for file_id in validation_list:
+        edf_file_name = dataset.edf_files[file_id].file_name[len(edf_path) + 1:-4]
+        print(edf_file_name)
+
+    print("Test set:")
+    for file_id in test_list:
+        edf_file_name = dataset.edf_files[file_id].file_name[len(edf_path) + 1:-4]
+        print(edf_file_name)
+
     max_epochs = 50
 
     conv_layers = []
@@ -86,15 +80,15 @@ def main():
     for layers in conv_layers:
         callbacks = define_callbacks('conv' + str(layers))
         model = hypnomodel.convModel(input1_shape=input1_shape, layers=layers)
-        model.fit_generator(generator=dataset.generator(train_list, 10, "train"),
-                    steps_per_epoch=dataset.steps_per_epoch(train_list, 10),
+        model.fit_generator(generator=dataset.generator(train_list, 30, "train"),
+                    steps_per_epoch=dataset.steps_per_epoch(train_list, 30),
                     validation_data=dataset.generator(validation_list, 1, "validation"),
                     validation_steps=dataset.steps_per_epoch(validation_list, 1),
                     callbacks=callbacks,
                     epochs=max_epochs)
         for file_id in test_list:
             x_file, y_file = dataset.load_set([file_id])
-            x_file, y_file = prepare_data(x_file, y_file, 30)
+            x_file, y_file = prepare_data(x_file, y_file)
             preds_file = model.predict(x_file)
             preds_file = np.argmax(preds_file, axis=1)
             print("File ", file_id)
