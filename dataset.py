@@ -147,8 +147,10 @@ class Dataset:
 
             for signal in self.signals:
                 rate = signals_rate[signal]
-                raw_signals[signal] -= self.means[signal]
-                raw_signals[signal] /= self.stds[signal]
+                mean_signal = np.mean(raw_signals[signal])
+                std_signal = np.std(raw_signals[signal])
+                raw_signals[signal] -= mean_signal
+                raw_signals[signal] /= std_signal
                 if rate != self.reference_rate:
                     shape1 = rate * 30
                     shape0 = raw_signals[signal].shape[0] // shape1
