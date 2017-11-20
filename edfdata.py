@@ -11,7 +11,7 @@ def loadEdfs(path):
     print ("Loading EDF files from", path)
     edf_files = []
     listfiles = os.listdir(path)
-    listfiles.sort()
+    # listfiles.sort()
     for file_name in listfiles:
         if isEdfFile(file_name):
             edf = pyedflib.EdfReader(path + "/" + file_name)
