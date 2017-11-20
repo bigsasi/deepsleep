@@ -4,6 +4,7 @@ except ImportError:
     import pickle
 import numpy as np
 import edfdata
+import re
 from utils import tensor_padding
 from keras.utils.np_utils import to_categorical
 
@@ -37,26 +38,6 @@ def prepare_data(X, Y):
     Y[Y >= 5] = 3 # move rem to number 3
 
     X = reshape_3d(X, Dataset.reference_rate, Dataset.window_length)
-       
-    # # window normalization:
-    # for idx in [0, 1, 3, 4]:
-    #     signal = X[:, :, idx]
-    #     mean_x = np.mean(signal, 1)
-    #     std_x = np.std(signal, 1)
-    #     mean_x = np.reshape(mean_x, (mean_x.shape[0], 1))
-    #     std_x = np.reshape(std_x, (std_x.shape[0], 1))
-    #     signal -= mean_x
-    #     signal /= std_x
-    #     X[:, :, idx] = signal
-        
-    # # signal normalization:
-    # for idx in [2]:
-    #     signal = X[:, :, idx]
-    #     mean_x = np.mean(signal)
-    #     std_x = np.std(signal)
-    #     signal -= mean_x
-    #     signal /= std_x
-    #     X[:, :, idx] = signal
         
     return X, Y
 
@@ -166,10 +147,8 @@ class Dataset:
 
             for signal in self.signals:
                 rate = signals_rate[signal]
-                # mean_signal = np.mean(raw_signals[signal])
-                # std_signal = np.std(raw_signals[signal]) 
-                raw_signals[signal] -= self.means[signal] #mean_signal
-                raw_signals[signal] /= self.stds[signal] #std_signal
+                raw_signals[signal] -= self.means[signal]
+                raw_signals[signal] /= self.stds[signal]
                 if rate != self.reference_rate:
                     shape1 = rate * 30
                     shape0 = raw_signals[signal].shape[0] // shape1
@@ -250,6 +229,15 @@ class Dataset:
         start = self.test_files
         num_files = self.train_files + self.validation_files
         return np.arange(start, start + num_files)
+
+    def name_to_id(self, files_name):
+        files_list = []
+        for file_name in files_name:
+            for (file_id, edf) in enumerate(self.edf_files):
+                if re.match(".*" + file_name + ".*", edf.file_name):
+                    files_list.append(file_id)
+
+        return files_list
 
     def print_set(self, files_list, name):
         print("Dataset: {}".format(name))
