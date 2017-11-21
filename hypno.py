@@ -39,29 +39,11 @@ def main():
     max_epochs = 50
 
     conv_layers = []
-    conv_layers.append([(128,20), (128,20), 20, (256,20)])
-    # for k in [64, 128, 256]:
-    #     for f in [3, 25, 50, 75, 125, 250][-2:]: # run only with 2 last f
-    #         conv_layers.append([(k, f)])
-
-    # for k in [64, 128, 256]:
-    #     for f in [5, 7, 11]:
-    #         conv_layers.append([(k, f), (k, f)])
-
-    # for k in [128]:
-    #     for f in [10, 15, 20, 25, 30]:
-    #         conv_layers.append([(k, f), (k, f), f, (k, f)])
-
-    # for f in [3, 5, 7, 11, 15, 20, 25]:
-    #     conv_layers.append([(64, f), 2, (128, f), 2, (256, f), 2, (512, f)])
-
-    # for k in [64, 128]:
-    #     for f in [3, 5, 7, 11, 15, 20, 25, 30]:
-    #         conv_layers.append([(k, f), (k, f), f, (k, f), (k, f)])
-
-    # for f in [30]:
-    #     for pool in [30]:
-    #         conv_layers.append([(256, f), pool, (512, f), pool])
+    conv_layers.append([(128,3), (128,3), 2])
+    conv_layers.append([(128,3), (128,3), 2, (128,3), (128,3)])
+    conv_layers.append([(128,3), (128,3), 2, (128,3), (128,3), 2, (128,3), (128,3)])
+    conv_layers.append([(128,3), (128,3), 2, (128,3), (128,3), 2, (128,3), (128,3), 2, (128,3), (128,3)])
+    conv_layers.append([(128,3), (128,3), 2, (128,3), (128,3), 2, (128,3), (128,3), 2, (128,3), (128,3), 2, (128,3), (128,3)])
 
     y_test = []
     preds = []

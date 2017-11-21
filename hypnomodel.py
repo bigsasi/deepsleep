@@ -66,7 +66,7 @@ def convModel(input1_shape, layers):
             print("Hodor")
     model.add(GlobalMaxPool1D())
     model.add(Dropout(0.5))
-    model.add(Dense(4, activation='softmax'))
+    model.add(Dense(5, activation='softmax'))
 
     model.compile(loss='binary_crossentropy',
                 metrics=['accuracy',precision], 
@@ -98,7 +98,7 @@ def convLstmModel(input1_shape, conv_layers, lstm_layers):
         else:
             model.add(LSTM(layer, return_sequences=True))
     model.add(Dropout(0.5))
-    model.add(Dense(4, activation='softmax'))
+    model.add(Dense(5, activation='softmax'))
 
     model.compile(loss='binary_crossentropy',
                 metrics=['accuracy',precision], 

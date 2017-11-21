@@ -2,9 +2,9 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+import re
 import numpy as np
 import edfdata
-import re
 from utils import tensor_padding
 from keras.utils.np_utils import to_categorical
 
@@ -32,14 +32,21 @@ def reshape_3d(x, rate, time_window):
 
 def prepare_data(X, Y):
     # Basic transformations to hypnogram
-    Y[Y == 2] = 1 # merge N1 and N2
-    Y[Y == 3] = 2 # merge stage 3 & 4 and move to number 2
-    Y[Y == 4] = 2 
-    Y[Y >= 5] = 3 # move rem to number 3
+    Y[Y == 2] = 2 # merge N1 and N2
+    Y[Y == 3] = 3 # merge stage 3 & 4 and move to number 2
+    Y[Y == 4] = 3 
+    Y[Y >= 5] = 4 # move rem to number 3
 
+    repeat_windows = 30 // Dataset.window_length
+    newY = np.empty((len(Y), repeat_windows))
+    print(Y.shape)
+    print(newY[:, 0].shape)
+    for i in range(repeat_windows):
+        newY[:, i] = Y.flatten()
+    newY = np.reshape(Y, (Y.shape[0] * repeat_windows, Y.shape[1]))
     X = reshape_3d(X, Dataset.reference_rate, Dataset.window_length)
         
-    return X, Y
+    return X, newY
 
 
 class Dataset:
@@ -50,7 +57,7 @@ class Dataset:
     test_files = 50
     reference_rate = 125
     window_length = 30
-    max_samples = 6 * 60 * 2
+    max_samples = 7 * 60 * (60 // window_length)
 
     @staticmethod
     def sample_shape():
@@ -81,6 +88,19 @@ class Dataset:
 
         self.total_seconds = np.sum(self.edf_duration)
         self.total_epochs = self.total_seconds // 30
+
+    def __load_file(self, file_idx):
+        edf = self.edf_files[file_idx]
+        edf_file_name = edf.file_name[len(self.edf_path) + 1:-4]
+        pickle_file = self.pckl_path + "/" + edf_file_name + ".pckl"
+        try:
+            f = open(pickle_file, 'rb')
+            [raw_signals, signals_rate, hypnogram, arousals] = pickle.load(f)
+            f.close()
+        except IOError:
+            [raw_signals, signals_rate, hypnogram, arousals] = load_edf_save_pickle(edf, self.signals, pickle_file)
+
+        return [raw_signals, signals_rate, hypnogram, arousals]
 
     def signal_index(self, signal):
         for (i, s) in enumerate(self.signals):
@@ -132,25 +152,15 @@ class Dataset:
         Y = np.zeros((int(epochs), 1))
 
         for (i, file_idx) in enumerate(files_list):
-            edf = self.edf_files[file_idx]
-            edf_file_name = edf.file_name[len(self.edf_path) + 1:-4]
-            pickle_file = self.pckl_path + "/" + edf_file_name + ".pckl"
-            try:
-                f = open(pickle_file, 'rb')
-                [raw_signals, signals_rate, hypnogram, arousals] = pickle.load(f)
-                f.close()
-            except IOError:
-                [raw_signals, signals_rate, hypnogram, arousals] = load_edf_save_pickle(edf, self.signals, pickle_file)
+            [raw_signals, signals_rate, hypnogram, arousals] = self.__load_file(file_idx)
 
             first_second = np.sum(edf_duration[:i])
             last_second = first_second + edf_duration[i]
 
             for signal in self.signals:
+                raw_signals[signal] -= self.means[signal]
+                raw_signals[signal] /= self.stds[signal]
                 rate = signals_rate[signal]
-                mean_signal = np.mean(raw_signals[signal])
-                std_signal = np.std(raw_signals[signal])
-                raw_signals[signal] -= mean_signal
-                raw_signals[signal] /= std_signal
                 if rate != self.reference_rate:
                     shape1 = rate * 30
                     shape0 = raw_signals[signal].shape[0] // shape1
@@ -178,15 +188,7 @@ class Dataset:
             stds[signal] = 0
 
         for (i, file_idx) in enumerate(files_list):
-            edf = self.edf_files[file_idx]
-            edf_file_name = edf.file_name[len(self.edf_path) + 1:-4]
-            pickle_file = self.pckl_path + "/" + edf_file_name + ".pckl"
-            try:
-                f = open(pickle_file, 'rb')
-                [raw_signals, signals_rate, hypnogram, arousals] = pickle.load(f)
-                f.close()
-            except IOError:
-                [raw_signals, signals_rate, hypnogram, arousals] = load_edf_save_pickle(edf, self.signals, pickle_file)
+            [raw_signals, signals_rate, hypnogram, arousals] = self.__load_file(file_idx)
             for signal in self.signals:
                 sums[signal] += np.sum(raw_signals[signal])
                 lens[signal] += np.sum(len(raw_signals[signal]))
@@ -195,15 +197,7 @@ class Dataset:
             means[signal] = sums[signal] / lens[signal]
 
         for (i, file_idx) in enumerate(files_list):
-            edf = self.edf_files[file_idx]
-            edf_file_name = edf.file_name[len(self.edf_path) + 1:-4]
-            pickle_file = self.pckl_path + "/" + edf_file_name + ".pckl"
-            try:
-                f = open(pickle_file, 'rb')
-                [raw_signals, signals_rate, hypnogram, arousals] = pickle.load(f)
-                f.close()
-            except IOError:
-                [raw_signals, signals_rate, hypnogram, arousals] = load_edf_save_pickle(edf, self.signals, pickle_file)
+            [raw_signals, signals_rate, hypnogram, arousals] = self.__load_file(file_idx)
             for signal in self.signals:
                 diffs[signal] += np.sum(np.square(raw_signals[signal] - means[signal]))
 
