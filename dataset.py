@@ -39,11 +39,10 @@ def prepare_data(X, Y):
 
     repeat_windows = 30 // Dataset.window_length
     newY = np.empty((len(Y), repeat_windows))
-    print(Y.shape)
-    print(newY[:, 0].shape)
+
     for i in range(repeat_windows):
         newY[:, i] = Y.flatten()
-    newY = np.reshape(Y, (Y.shape[0] * repeat_windows, Y.shape[1]))
+    newY = np.reshape(newY, (Y.shape[0] * repeat_windows, Y.shape[1]))
     X = reshape_3d(X, Dataset.reference_rate, Dataset.window_length)
         
     return X, newY
