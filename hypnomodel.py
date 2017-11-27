@@ -45,7 +45,7 @@ def mlpModel(input1_shape, layers=[4]):
     print(model.summary())
     return model
 
-def convModel(input1_shape, layers):
+def convModel(input1_shape, layers, num_classes):
     """" convolutional model defined by layers. ith entry 
     defines ith layer. If entry is a (x,y) it defines a conv layer
     with x kernels and y filters. If entry is x it defines a pool layer
@@ -66,7 +66,7 @@ def convModel(input1_shape, layers):
             print("Hodor")
     model.add(GlobalMaxPool1D())
     model.add(Dropout(0.5))
-    model.add(Dense(5, activation='softmax'))
+    model.add(Dense(num_classes, activation='softmax'))
 
     model.compile(loss='binary_crossentropy',
                 metrics=['accuracy',precision], 

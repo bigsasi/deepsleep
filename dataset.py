@@ -51,6 +51,7 @@ def prepare_data(X, Y):
 class Dataset:
 
     signals = ['eeg1', 'eeg2', 'emg', 'eogr', 'eogl']
+    classes = ['W', 'N1', 'N2', 'N3', 'REM']
     train_files = 180
     validation_files = 20
     test_files = 50
@@ -239,3 +240,6 @@ class Dataset:
         for file_id in files_list:
             edf_file_name = self.edf_files[file_id].file_name[len(self.edf_path) + 1:-4]
             print(edf_file_name)
+
+    def get_classes(self):
+        return self.classes

@@ -3,8 +3,7 @@ import scipy.signal
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
 
-def print_validation(y_true, y_pred):
-    classes = ['W', 'N1-2', 'N3', 'REM']
+def print_validation(y_true, y_pred, classes):
     conf_matrix = confusion_matrix(y_true, y_pred)
     cm_normalized = conf_matrix.astype('float') / conf_matrix.sum(axis=1)[:, np.newaxis]
     report = classification_report(y_true, y_pred, target_names=classes)
