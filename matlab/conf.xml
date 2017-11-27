@@ -1,0 +1,280 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<MiasoftMCHconfiguration>
+  <montage>
+    <name>Somnoscreen_PSG_Headbox_APSG</name>
+    <device>SomnoPSG</device>
+    <channelmapping>
+      <eeg1 label="EEG O2-Cz">
+        <!--O2/Cz-->
+        <channel idx="6" label="EEG O2-Cz" sign="plus"></channel>
+      </eeg1>
+      <eeg2 label="EEG Fpz-Cz">
+        <!--Fpz/Cz-->
+        <channel idx="3" label="EEG Fpz-Cz" sign="plus"></channel>
+      </eeg2>
+      <emg label="EMG chin">
+        <channel idx="7" label="EMG chin" sign="plus"></channel>
+      </emg>
+      <eog1 label="EOG E2-E1">
+        <!--E2-E1-->
+        <channel idx="1" label="EOG E2-Cz" sign="plus"></channel>
+        <channel idx="2" label="EOG E1-Cz" sign="minus"></channel>
+      </eog1>
+      <eog2 label="EOG E2-E1">
+        <channel idx="1" label="EOG E2-Cz" sign="plus"></channel>
+        <channel idx="2" label="EOG E1-Cz" sign="minus"></channel>
+      </eog2>
+      <airflow label="Resp nasal">
+        <!--Nassal pressure (we do not use resp-oronasal). TODO: investigate-->
+        <channel idx="10" label="Resp nasal" sign="plus"></channel>
+      </airflow>
+      <abdoRes label="Resp abdomen">
+        <channel idx="12" label="Resp abdomen" sign="plus"></channel>
+      </abdoRes>
+      <thorRes label="Resp chest">
+        <channel idx="15" label="Resp chest" sign="plus"></channel>
+      </thorRes>
+      <saturation label="SaO2">
+        <channel idx="24" label="SaO2" sign="plus"></channel>
+      </saturation>
+      <position label="Body position">
+        <channel idx="20" label="Body position" sign="plus"></channel>
+      </position>
+	  <ecg label="ECG">
+		<channel idx="8" label="ECG" sign="plus"></channel>
+	  </ecg>
+    </channelmapping>
+  </montage>
+  <montage>
+    <name>Somnoscreen_PSG_Cable_APSG</name>
+    <device>SomnoPSG</device>
+    <channelmapping>
+      <eeg1 label="EEG O2-Cz">
+        <!--O2/Cz-->
+        <channel idx="6" label="EEG O2-Cz" sign="plus"></channel>
+      </eeg1>
+      <eeg2 label="EEG Fpz-Cz">
+        <!--Fpz/Cz-->
+        <channel idx="3" label="EEG Fpz-Cz" sign="plus"></channel>
+      </eeg2>
+      <emg label="EMG chin">
+        <channel idx="7" label="EMG chin" sign="plus"></channel>
+      </emg>
+      <eog1 label="EOG E2-E1">
+        <!--E2-E1-->
+        <channel idx="1" label="EOG E2-Cz" sign="plus"></channel>
+        <channel idx="2" label="EOG E1-Cz" sign="minus"></channel>
+      </eog1>
+      <eog2 label="EOG E2-E1">
+        <channel idx="1" label="EOG E2-Cz" sign="plus"></channel>
+        <channel idx="2" label="EOG E1-Cz" sign="minus"></channel>
+      </eog2>
+      <airflow label="Resp nasal">
+        <!--Nassal pressure (we do not use resp-oronasal). TODO: investigate-->
+        <channel idx="9" label="Resp nasal" sign="plus"></channel>
+      </airflow>
+      <abdoRes label="Resp abdomen">
+        <channel idx="10" label="Resp abdomen" sign="plus"></channel>
+      </abdoRes>
+      <thorRes label="Resp chest">
+        <channel idx="13" label="Resp chest" sign="plus"></channel>
+      </thorRes>
+      <saturation label="SaO2">
+        <channel idx="22" label="SaO2" sign="plus"></channel>
+      </saturation>
+      <position label="Body position">
+        <channel idx="18" label="Body position" sign="plus"></channel>
+      </position>
+	  <ecg label="ECG">
+		<channel idx="8" label="ECG" sign="plus"></channel>
+	  </ecg>
+    </channelmapping>
+  </montage>
+  <montage>
+    <name>Somnoscreen_Plus_APSG</name>
+    <device>SomnoPlus</device>
+    <channelmapping>
+      <eeg1 label="EEG O2-Cz">
+        <!--O2/Cz-->
+        <channel idx="8" label="EEG O2-Cz" sign="plus"></channel>
+      </eeg1>
+      <eeg2 label="EEG Fpz-Cz">
+        <!--Fpz/Cz-->
+        <channel idx="4" label="EEG Fpz-Cz" sign="plus"></channel>
+      </eeg2>
+      <emg label="EMG chin+-chin-">
+        <!--EMG chin-->
+        <channel idx="5" label="EMG chin+" sign="plus"></channel>
+        <channel idx="12" label="EMG chin-" sign="minus"></channel>
+      </emg>
+      <eog1 label="EOG E2-E1">
+        <!--E2-E1-->
+        <channel idx="6" label="EOG E2-Cz" sign="plus"></channel>
+        <channel idx="11" label="EOG E1-Cz" sign="minus"></channel>
+      </eog1>
+      <eog2 label="EOG E2-E1">
+        <channel idx="6" label="EOG E2-Cz" sign="plus"></channel>
+        <channel idx="11" label="EOG E1-Cz" sign="minus"></channel>
+      </eog2>
+      <airflow label="Resp nasal">
+        <!--Nassal pressure (we do not use resp-oronasal). TODO: investigate-->
+        <channel idx="17" label="Resp nasal" sign="plus"></channel>
+      </airflow>
+      <abdoRes label="Resp abdomen">
+        <channel idx="18" label="Resp abdomen" sign="plus"></channel>
+      </abdoRes>
+      <thorRes label="Resp chest">
+        <channel idx="21" label="Resp chest" sign="plus"></channel>
+      </thorRes>
+      <saturation label="SaO2">
+        <channel idx="27" label="SaO2" sign="plus"></channel>
+      </saturation>
+      <position label="Body position">
+        <channel idx="23" label="Body position" sign="plus"></channel>
+      </position>
+	  <ecg label="ECG">
+		<channel idx="13" label="ECG" sign="plus"></channel>
+	  </ecg>
+    </channelmapping>
+  </montage>
+  <montage>
+    <name>Somnoscreen_1020_KPSG</name>
+    <device>Somno1020</device>
+    <channelmapping>
+      <eeg1 label="EEG C4-A1">
+        <channel idx="2" label="EEG C4-Cz" sign="plus"></channel>
+        <channel idx="3" label="EEG A1-Cz" sign="minus"></channel>
+      </eeg1>
+      <eeg2 label="EEG Fpz-Cz">
+        <!--Fpz/Cz-->
+        <channel idx="4" label="EEG Fpz-Cz" sign="plus"></channel>
+      </eeg2>
+      <emg label="EMG chin+-chin-">
+        <!--EMG chin-->
+        <channel idx="5" label="EMG chin+" sign="plus"></channel>
+        <channel idx="12" label="EMG chin-" sign="minus"></channel>
+      </emg>
+      <eog1 label="EOG E2-E1">
+        <!--E2-E1-->
+        <channel idx="6" label="EOG E2-Cz" sign="plus"></channel>
+        <channel idx="11" label="EOG E1-Cz" sign="minus"></channel>
+      </eog1>
+      <eog2 label="EOG E2-E1">
+        <channel idx="6" label="EOG E2-Cz" sign="plus"></channel>
+        <channel idx="11" label="EOG E1-Cz" sign="minus"></channel>
+      </eog2>
+      <airflow label="Resp nasal">
+        <!--Nassal pressure (we do not use resp-oronasal). TODO: investigate-->
+        <channel idx="17" label="Resp nasal" sign="plus"></channel>
+      </airflow>
+      <abdoRes label="Resp abdomen">
+        <channel idx="21" label="Resp abdomen" sign="plus"></channel>
+      </abdoRes>
+      <thorRes label="Resp chest">
+        <channel idx="18" label="Resp chest" sign="plus"></channel>
+      </thorRes>
+      <saturation label="SaO2">
+        <channel idx="27" label="SaO2" sign="plus"></channel>
+      </saturation>
+      <position label="Body position">
+        <channel idx="23" label="Body position" sign="plus"></channel>
+      </position>
+	  <ecg label="ECG">
+		<channel idx="13" label="ECG" sign="plus"></channel>
+	  </ecg>
+    </channelmapping>
+  </montage>
+  <montage>
+    <name>Somnoscreen_1020_KPSG_FULL</name>
+    <device>Somno1020</device>
+    <channelmapping>
+      <eeg1 label="EEG C4-A1">
+        <channel idx="4" label="EEG C4-Cz" sign="plus"></channel>
+        <channel idx="9" label="EEG A1-Cz" sign="minus"></channel>
+      </eeg1>
+      <eeg2 label="EEG Fpz-Cz">
+        <!--Fpz/Cz-->
+        <channel idx="19" label="EEG Fpz-Cz" sign="plus"></channel>
+      </eeg2>
+      <emg label="EMG chin+-chin-">
+        <!--EMG chin-->
+        <channel idx="11" label="EMG chin+" sign="plus"></channel>
+        <channel idx="22" label="EMG chin-" sign="minus"></channel>
+      </emg>
+      <eog1 label="EOG E2-E1">
+        <!--E2-E1-->
+        <channel idx="12" label="EOG E2-Cz" sign="plus"></channel>
+        <channel idx="20" label="EOG E1-Cz" sign="minus"></channel>
+      </eog1>
+      <eog2 label="EOG E2-E1">
+        <channel idx="12" label="EOG E2-Cz" sign="plus"></channel>
+        <channel idx="20" label="EOG E1-Cz" sign="minus"></channel>
+      </eog2>
+      <airflow label="Resp nasal">
+        <!--Nassal pressure (we do not use resp-oronasal). TODO: investigate-->
+        <channel idx="27" label="Resp nasal" sign="plus"></channel>
+      </airflow>
+      <abdoRes label="Resp abdomen">
+        <channel idx="31" label="Resp abdomen" sign="plus"></channel>
+      </abdoRes>
+      <thorRes label="Resp chest">
+        <channel idx="28" label="Resp chest" sign="plus"></channel>
+      </thorRes>
+      <saturation label="SaO2">
+        <channel idx="37" label="SaO2" sign="plus"></channel>
+      </saturation>
+      <position label="Body position">
+        <channel idx="33" label="Body position" sign="plus"></channel>
+      </position>
+	  <ecg label="ECG">
+		<channel idx="23" label="ECG" sign="plus"></channel>
+	  </ecg>
+    </channelmapping>
+  </montage>
+  <montage>
+    <name>SHHS</name>
+    <device>SHHSdevice</device>
+    <channelmapping>
+      <eeg1 label="EEG C3/A2">
+        <!--C3/A2-->
+        <channel idx="8" label="EEG" sign="plus"></channel>
+      </eeg1>
+      <eeg2 label="EEG C4/A1">
+        <!--C4/A1-->
+        <channel idx="3" label="EEG(sec)" sign="plus"></channel>
+      </eeg2>
+      <emg label="EMG chin">
+        <!--EMG chin-->
+        <channel idx="5" label="EMG" sign="plus"></channel>
+      </emg>
+      <eog1 label="EOG(L)">
+        <!--EOG(L)-->
+        <channel idx="6" label="EOG(L)" sign="plus"></channel>
+      </eog1>
+      <eog2 label="EOG(R)">
+		<!--EOG(R)-->
+        <channel idx="7" label="EOG(R)" sign="plus"></channel>
+      </eog2>
+      <airflow label="AIRFLOW">
+        <!--Thermistor-->
+        <channel idx="9" label="AIRFLOW" sign="plus"></channel>
+      </airflow>
+      <abdoRes label="ABDO RES">
+        <channel idx="11" label="ABDO RES" sign="plus"></channel>
+      </abdoRes>
+      <thorRes label="THOR RES">
+        <channel idx="10" label="THOR RES" sign="plus"></channel>
+      </thorRes>
+      <saturation label="SaO2">
+        <channel idx="1" label="SaO2" sign="plus"></channel>
+      </saturation>
+      <position label="POSITION">
+        <channel idx="12" label="POSITION" sign="plus"></channel>
+      </position>
+	  <ecg label="ECG">
+		<channel idx="4" label="ECG" sign="plus"></channel>
+	  </ecg>
+    </channelmapping>
+  </montage>
+</MiasoftMCHconfiguration>
+
