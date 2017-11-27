@@ -28,6 +28,8 @@ def main():
 
     dataset = Dataset(edf_path, pickle_path)
     
+    classes = dataset.get_classes()
+
     test_list = dataset.test_list()
     train_list = dataset.train_list()
     validation_list = dataset.validation_list()
@@ -50,7 +52,7 @@ def main():
     input1_shape = Dataset.sample_shape()
     for layers in conv_layers:
         callbacks = define_callbacks('conv' + str(layers))
-        model = hypnomodel.convModel(input1_shape=input1_shape, layers=layers)
+        model = hypnomodel.convModel(input1_shape=input1_shape, layers=layers, num_classes=len(classes))
         model.fit_generator(generator=dataset.generator(train_list, 30, "train"),
                     steps_per_epoch=dataset.steps_per_epoch(train_list, 30),
                     validation_data=dataset.generator(validation_list, 1, "validation"),
@@ -63,7 +65,7 @@ def main():
             preds_file = model.predict(x_file)
             preds_file = np.argmax(preds_file, axis=1)
             print("File ", file_id)
-            print_validation(y_file.flatten(), preds_file)
+            print_validation(y_file.flatten(), preds_file, classes)
             if not len(y_test):
                 y_test = y_file
                 preds = preds_file
@@ -71,7 +73,7 @@ def main():
                 y_test = np.concatenate((y_test, y_file))
                 preds = np.concatenate((preds, preds_file))
         print("All files:")
-        print_validation(y_test.flatten(), preds)
+        print_validation(y_test.flatten(), preds, classes)
 
 
 if __name__ == '__main__':

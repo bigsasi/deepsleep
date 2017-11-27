@@ -39,11 +39,10 @@ def prepare_data(X, Y):
 
     repeat_windows = 30 // Dataset.window_length
     newY = np.empty((len(Y), repeat_windows))
-    print(Y.shape)
-    print(newY[:, 0].shape)
+
     for i in range(repeat_windows):
         newY[:, i] = Y.flatten()
-    newY = np.reshape(Y, (Y.shape[0] * repeat_windows, Y.shape[1]))
+    newY = np.reshape(newY, (Y.shape[0] * repeat_windows, Y.shape[1]))
     X = reshape_3d(X, Dataset.reference_rate, Dataset.window_length)
         
     return X, newY
@@ -52,6 +51,7 @@ def prepare_data(X, Y):
 class Dataset:
 
     signals = ['eeg1', 'eeg2', 'emg', 'eogr', 'eogl']
+    classes = ['W', 'N1', 'N2', 'N3', 'REM']
     train_files = 180
     validation_files = 20
     test_files = 50
@@ -240,3 +240,6 @@ class Dataset:
         for file_id in files_list:
             edf_file_name = self.edf_files[file_id].file_name[len(self.edf_path) + 1:-4]
             print(edf_file_name)
+
+    def get_classes(self):
+        return self.classes
