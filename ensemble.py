@@ -39,7 +39,7 @@ def main():
     config.read('config.ini')
     edf_path = config.get('paths', 'edf')
     pickle_path = config.get('paths', 'pickle')
-    models_path = 'models'
+    models_path = 'esann/trained_models'
 
     dataset = Dataset(edf_path, pickle_path)
     
